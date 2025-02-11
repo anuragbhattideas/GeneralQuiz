@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Left-Right Matching Quiz</title>
+    <!-- Correct Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            margin-bottom: 30px;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .quiz-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+        }
+        .quiz-column {
+            list-style-type: none;
+            padding: 0;
+            width: 48%;
+        }
+        .quiz-column li {
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #007bff;
+            cursor: pointer;
+            border-radius: 4px;
+            background-color: #ffffff;
+            transition: background-color 0.3s;
+        }
+        .quiz-column li:hover {
+            background-color: #f1f8ff;
+        }
+        .quiz-column li.selected {
+            background-color: #b3d9ff;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            padding: 12px 25px;
+            font-size: 16px;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .content-section {
+            margin-top: 30px;
+        }
+        #about-section {
+            margin-top: 50px;
+        }
+        .quiz-header {
+            display: none;
+        }
+        #quizContainer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Quiz App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#" onclick="showHome()">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showAbout()">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Section -->
+    <div id="home-section" class="container content-section">
+        <h2 class="text-center">CSV Left-Right Matching Quiz</h2>
+        <p class="text-center">Upload a CSV file containing questions and answers to start the quiz.</p>
+
+        <div class="text-center mb-4">
+            <input type="file" id="csvFile" class="form-control form-control-lg" accept=".csv" />
+        </div>
+
+        <div class="quiz-container" id="quizContainer">
+            <div class="quiz-column">
+                <h4 class="quiz-header">Questions</h4>
+                <ul id="left-column"></ul>
+            </div>
+            <div class="quiz-column">
+                <h4 class="quiz-header">Answers</h4>
+                <ul id="right-column"></ul>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-primary" style="display: none;" id="checkButton" onclick="checkAnswers()">Check Answers</button>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <!-- About Section -->
+    <div id="about-section" class="container content-section" style="display: none;">
+        <h2>About the Quiz</h2>
+        <p>This is a simple Left-Right matching quiz that allows you to upload a CSV file containing questions and answers. After uploading the file, the questions will appear on the left side and the answers on the right. Your task is to match each question with the correct answer.</p>
+        <p>Once you've selected a question and an answer, click on "Check Answers" to verify if your match is correct!</p>
+        <p>The answers are shuffled to make the quiz more challenging!</p>
+        <p><strong>How to play:</strong></p>
+        <ul>
+            <li>Upload a CSV file with two columns: questions and answers.</li>
+            <li>Click on a question on the left and an answer on the right.</li>
+            <li>Click "Check Answers" to see if your selection is correct.</li>
+        </ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let questions = [];
+        let answers = [];
+        let correctPairs = [];
+        let selectedLeft = null;
+        let selectedRight = null;
+
+        // Function to handle file selection and read CSV file
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+                    const rows = contents.split("\n");
+                    questions = [];
+                    answers = [];
+                    correctPairs = [];
+                    
+                    rows.forEach(row => {
+                        const columns = row.split(",");
+                        if (columns.length === 2) {
+                            questions.push(columns[0].trim());
+                            answers.push(columns[1].trim());
+                            correctPairs.push([columns[0].trim(), columns[1].trim()]);
+                        }
+                    });
+                    
+                    shuffleAnswers();  // Shuffle the answers
+                    generateQuiz();
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please upload a valid CSV file.');
+            }
+        }
+
+        // Shuffle the answers to randomize their order
+        function shuffleAnswers() {
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+        }
+
+        // Function to generate the quiz HTML
+        function generateQuiz() {
+            const leftColumn = document.getElementById("left-column");
+            const rightColumn = document.getElementById("right-column");
+            leftColumn.innerHTML = '';
+            rightColumn.innerHTML = '';
+
+            // Create question list
+            questions.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.addEventListener('click', () => selectItem(li, 'left'));
+                leftColumn.appendChild(li);
+            });
+
+            // Create answer list
+            answers.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.addEventListener('click', () => selectItem(li, 'right'));
+                rightColumn.appendChild(li);
+            });
+
+            document.getElementById("quizContainer").style.display = "flex";
+            document.getElementById("checkButton").style.display = "inline-block";
+            document.querySelectorAll('.quiz-header').forEach(header => header.style.display = "block");
+        }
+
+        // Function to handle item selection
+        function selectItem(item, column) {
+            if (column === 'left') {
+                if (selectedLeft) selectedLeft.classList.remove('selected');
+                selectedLeft = item;
+                selectedLeft.classList.add('selected');
+            } else {
+                if (selectedRight) selectedRight.classList.remove('selected');
+                selectedRight = item;
+                selectedRight.classList.add('selected');
+            }
+        }
+
+        // Function to check if the selected items match
+        function checkAnswers() {
+            const result = document.getElementById("result");
+            if (selectedLeft && selectedRight) {
+                const leftText = selectedLeft.textContent;
+                const rightText = selectedRight.textContent;
+                
+                // Check if the pair matches in the correctPairs array
+                const isCorrect = correctPairs.some(pair => pair[0] === leftText && pair[1] === rightText);
+
+                if (isCorrect) {
+                    result.textContent = "Correct match!";
+                    result.style.color = "green";
+                } else {
+                    result.textContent = "Incorrect match. Try again!";
+                    result.style.color = "red";
+                }
+            } else {
+                result.textContent = "Please select both items to check the match!";
+                result.style.color = "orange";
+            }
+        }
+
+        // Attach the CSV file input event listener
+        document.getElementById("csvFile").addEventListener('change', handleFileSelect);
+
+        // Show Home section
+        function showHome() {
+            document.getElementById("home-section").style.display = "block";
+            document.getElementById("about-section").style.display = "none";
+        }
+
+        // Show About section
+        function showAbout() {
+            document.getElementById("about-section").style.display = "block";
+            document.getElementById("home-section").style.display = "none";
+        }
+    </script>
+
+</body>
+</html>
